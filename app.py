@@ -422,7 +422,7 @@ with st.sidebar:
         with st.expander(get_text("advanced_settings", lang)):
             st.subheader(get_text("model_selection", lang))
             
-["meta-llama/Llama-3.2-3B-Instruct:together",
+            llm_options = ["meta-llama/Llama-3.2-3B-Instruct:together",
                              "Qwen/Qwen2.5-7B-Instruct:together",
                              "marin-community/marin-8b-instruct:together"]
             
