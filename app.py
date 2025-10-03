@@ -155,6 +155,13 @@ def create_chat(files: List, embedding_model: str, lang: str) -> Optional[dict]:
         return None
     except Exception as e:
         st.error(f"{get_text('error_api', lang)}: {str(e)}")
+        st.error(f"Status code: {response.status_code}")
+        st.error(f"Response text: {response.text}")  # 👈 importante
+        try:
+            error_json = response.json()
+            st.error(error_json)
+        except ValueError:
+            st.error("No JSON in response")
         return None
 
 
