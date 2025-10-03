@@ -1,0 +1,11 @@
+# Streamlit Frontend Requirements
+
+# Core
+streamlit==1.31.0
+requests==2.31.0
+
+# Utilities
+python-dotenv==1.0.0
+
+# Optional: Para detección de idioma del navegador
+# streamlit-js-eval==0.1.5
