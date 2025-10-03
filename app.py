@@ -155,13 +155,6 @@ def create_chat(files: List, embedding_model: str, lang: str) -> Optional[dict]:
         return None
     except Exception as e:
         st.error(f"{get_text('error_api', lang)}: {str(e)}")
-        st.error(f"Status code: {response.status_code}")
-        st.error(f"Response text: {response.text}")  # 👈 importante
-        try:
-            error_json = response.json()
-            st.error(error_json)
-        except ValueError:
-            st.error("No JSON in response")
         return None
 
 
@@ -429,7 +422,7 @@ with st.sidebar:
         with st.expander(get_text("advanced_settings", lang)):
             st.subheader(get_text("model_selection", lang))
             
-            llm_options = ["meta-llama/Llama-3.2-3B-Instruct:together",
+["meta-llama/Llama-3.2-3B-Instruct:together",
                              "Qwen/Qwen2.5-7B-Instruct:together",
                              "marin-community/marin-8b-instruct:together"]
             
@@ -540,17 +533,90 @@ else:
                     with st.expander("📊 Metadata"):
                         st.json(message["metadata"])
     
-    # Chat input
-    if prompt := st.chat_input(get_text("chat_placeholder", lang)):
+    # Function to process prompt
+    def process_prompt_message(prompt_text: str):
+        """Process a prompt and get AI response"""
         # Add user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt_text})
         
         # Get AI response
+        result = ask_question(
+            st.session_state.chat_id,
+            prompt_text,
+            st.session_state.selected_llm,
+            st.session_state.temperature,
+            st.session_state.max_tokens,
+            lang
+        )
+        
+        if result:
+            answer = result["answer"]
+            
+            # Store message with metadata
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer,
+                "metadata": {
+                    "model": result["model_used"],
+                    "sources": result["sources_used"],
+                    "timestamp": result["timestamp"]
+                }
+            })
+            return True
+        return False
+    
+    # Check if we have a pending suggestion to process
+    if "pending_suggestion" in st.session_state and st.session_state.pending_suggestion:
+        suggestion_text = st.session_state.pending_suggestion
+        st.session_state.pending_suggestion = None
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.markdown(suggestion_text)
+        
+        # Get and display AI response
         with st.chat_message("assistant"):
             placeholder = st.empty()
             with st.spinner(get_text("thinking", lang)):
+                # Process without adding to messages (already done in process_prompt_message)
+                result = ask_question(
+                    st.session_state.chat_id,
+                    suggestion_text,
+                    st.session_state.selected_llm,
+                    st.session_state.temperature,
+                    st.session_state.max_tokens,
+                    lang
+                )
+                
+                if result:
+                    answer = result["answer"]
+                    animate_text(answer, placeholder)
+                    
+                    # Update last message with metadata
+                    if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
+                        st.session_state.messages[-1]["metadata"] = {
+                            "model": result["model_used"],
+                            "sources": result["sources_used"],
+                            "timestamp": result["timestamp"]
+                        }
+                else:
+                    placeholder.markdown(f"{get_text('error', lang)}: No se pudo obtener respuesta")
+        
+        st.rerun()
+    
+    # Chat input
+    if prompt := st.chat_input(get_text("chat_placeholder", lang)):
+        # Display user message
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Get and display AI response
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            with st.spinner(get_text("thinking", lang)):
+                # Add user message
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                
                 result = ask_question(
                     st.session_state.chat_id,
                     prompt,
@@ -577,8 +643,8 @@ else:
                 else:
                     placeholder.markdown(f"{get_text('error', lang)}: No se pudo obtener respuesta")
 
-# --- Suggestions section ---
-if st.session_state.chat_id:
+# --- Suggestions section (only show when chat is empty) ---
+if st.session_state.chat_id and len(st.session_state.messages) == 0:
     st.markdown("---")
     st.subheader("💡 " + ("Sugerencias" if lang == "es" else "Suggestions"))
     
@@ -592,8 +658,11 @@ if st.session_state.chat_id:
     cols = st.columns(4)
     for idx, (suggestion_es, suggestion_en) in enumerate(suggestions):
         suggestion = suggestion_es if lang == "es" else suggestion_en
+        suggestion_text = suggestion[2:]  # Remove emoji
         with cols[idx]:
             if st.button(suggestion, use_container_width=True, key=f"sug_{idx}"):
-                # Simulate clicking on the suggestion
-                st.session_state.messages.append({"role": "user", "content": suggestion[2:]})
+                # Add user message to session state
+                st.session_state.messages.append({"role": "user", "content": suggestion_text})
+                # Set pending suggestion for processing
+                st.session_state.pending_suggestion = suggestion_text
                 st.rerun()
