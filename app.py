@@ -322,7 +322,7 @@ if "chat_stats" not in st.session_state:
 if "language" not in st.session_state:
     st.session_state.language = "es"
 if "selected_llm" not in st.session_state:
-    st.session_state.selected_llm = "gpt-3.5-turbo"
+    st.session_state.selected_llm = "meta-llama/Llama-3.2-3B-Instruct:together"
 if "temperature" not in st.session_state:
     st.session_state.temperature = 0.7
 if "max_tokens" not in st.session_state:
@@ -422,13 +422,9 @@ with st.sidebar:
         with st.expander(get_text("advanced_settings", lang)):
             st.subheader(get_text("model_selection", lang))
             
-            llm_options = [
-                "gpt-3.5-turbo",
-                "gpt-4",
-                "gpt-4-turbo-preview",
-                "claude-3-sonnet-20240229",
-                "claude-3-opus-20240229"
-            ]
+            llm_options = ["meta-llama/Llama-3.2-3B-Instruct:together",
+                             "Qwen/Qwen2.5-7B-Instruct:together",
+                             "marin-community/marin-8b-instruct:together"]
             
             st.session_state.selected_llm = st.selectbox(
                 get_text("select_model", lang),
